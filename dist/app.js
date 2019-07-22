@@ -16491,97 +16491,90 @@ var _reactReconciler2 = _interopRequireDefault(_reactReconciler);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+function setStyles(domElement, styles) {
+  Object.keys(styles).forEach(function (name) {
+    var rawValue = styles[name];
+    var isEmpty = rawValue === null || typeof rawValue === 'boolean' || rawValue === '';
+
+    // Unset the style to its default values using an empty string
+    if (isEmpty) domElement.style[name] = '';else {
+      var value = typeof rawValue === 'number' && !isUnitlessProperty(name) ? rawValue + 'px' : rawValue;
+
+      domElement.style[name] = value;
+    }
+  });
+}
+
 var HostConfig = {
   now: Date.now,
-  getRootHostContext: function getRootHostContext() {
-    var _console;
-
-    for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-      args[_key] = arguments[_key];
-    }
-
-    (_console = console).log.apply(_console, ['getRootHostContext'].concat(args));
+  getRootHostContext: function getRootHostContext(rootInstance) {
+    console.log('getRootHostContext', rootInstance);
+    return { rootHostContext: 'yes' };
   },
-  getChildHostContext: function getChildHostContext() {
-    var _console2;
-
-    for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-      args[_key2] = arguments[_key2];
-    }
-
-    (_console2 = console).log.apply(_console2, ['getChildHostContext'].concat(args));
+  getChildHostContext: function getChildHostContext(parentHostContext, type, rootInstance) {
+    console.log('getChildHostContext', parentHostContext, type, rootInstance);
+    return { childHostContext: 'yes' };
   },
-  shouldSetTextContent: function shouldSetTextContent() {
-    var _console3;
-
-    for (var _len3 = arguments.length, args = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
-      args[_key3] = arguments[_key3];
-    }
-
-    (_console3 = console).log.apply(_console3, ['shouldSetTextContent'].concat(args));
+  shouldSetTextContent: function shouldSetTextContent(type, props) {
+    console.log('shouldSetTextContent', type, props);
+    return type === 'textarea' || typeof props.children === 'string' || typeof props.children === 'number';
   },
-  createTextInstance: function createTextInstance() {
-    var _console4;
-
-    for (var _len4 = arguments.length, args = Array(_len4), _key4 = 0; _key4 < _len4; _key4++) {
-      args[_key4] = arguments[_key4];
-    }
-
-    (_console4 = console).log.apply(_console4, ['createTextInstance'].concat(args));
+  createTextInstance: function createTextInstance(text, rootContainerInstance, internalInstanceHandle) {
+    console.log('createTextInstance', text, rootContainerInstance, internalInstanceHandle);
+    return document.createTextNode(text);
   },
-  createInstance: function createInstance() {
-    var _console5;
-
-    for (var _len5 = arguments.length, args = Array(_len5), _key5 = 0; _key5 < _len5; _key5++) {
-      args[_key5] = arguments[_key5];
-    }
-
-    (_console5 = console).log.apply(_console5, ['createInstance'].concat(args));
+  createInstance: function createInstance(type, props, rootContainerInstance, hostContext, internalInstanceHandle) {
+    console.log('createInstance', type, props, rootContainerInstance, hostContext, internalInstanceHandle);
+    return document.createElement(type);
   },
-  appendInitialChild: function appendInitialChild() {
-    var _console6;
-
-    for (var _len6 = arguments.length, args = Array(_len6), _key6 = 0; _key6 < _len6; _key6++) {
-      args[_key6] = arguments[_key6];
-    }
-
-    (_console6 = console).log.apply(_console6, ['appendInitialChild'].concat(args));
+  appendInitialChild: function appendInitialChild(parentInstance, child) {
+    console.log('appendInitialChild', parentInstance, child);
+    parentInstance.appendChild(child);
   },
-  finalizeInitialChildren: function finalizeInitialChildren() {
-    var _console7;
+  finalizeInitialChildren: function finalizeInitialChildren(domElement, type, props, rootContainerInstance, hostContext) {
+    console.log('finalizeInitialChildren', domElement, type, props, rootContainerInstance, hostContext);
+    // Set the prop to the domElement
+    Object.keys(props).forEach(function (propName) {
+      var propValue = props[propName];
 
-    for (var _len7 = arguments.length, args = Array(_len7), _key7 = 0; _key7 < _len7; _key7++) {
-      args[_key7] = arguments[_key7];
+      if (propName === 'style') {
+        setStyles(domElement, propValue);
+      } else if (propName === 'children') {
+        // Set the textContent only for literal string or number children, whereas
+        // nodes will be appended in `appendChild`
+        if (typeof propValue === 'string' || typeof propValue === 'number') {
+          domElement.textContent = propValue;
+        }
+      } else if (propName === 'className') {
+        domElement.setAttribute('class', propValue);
+      } else if (isEventName(propName)) {
+        var eventName = propName.toLowerCase().replace('on', '');
+        domElement.addEventListener(eventName, propValue);
+      } else {
+        domElement.setAttribute(propName, propValue);
+      }
+    });
+
+    // Check if needs focus
+    switch (type) {
+      case 'button':
+      case 'input':
+      case 'select':
+      case 'textarea':
+        return !!props.autoFocus;
     }
 
-    (_console7 = console).log.apply(_console7, ['finalizeInitialChildren'].concat(args));
+    return false;
   },
-  prepareForCommit: function prepareForCommit() {
-    var _console8;
-
-    for (var _len8 = arguments.length, args = Array(_len8), _key8 = 0; _key8 < _len8; _key8++) {
-      args[_key8] = arguments[_key8];
-    }
-
-    (_console8 = console).log.apply(_console8, ['prepareForCommit'].concat(args));
+  prepareForCommit: function prepareForCommit(containerInfo) {
+    console.log('prepareForCommit', containerInfo);
   },
-  resetAfterCommit: function resetAfterCommit() {
-    var _console9;
-
-    for (var _len9 = arguments.length, args = Array(_len9), _key9 = 0; _key9 < _len9; _key9++) {
-      args[_key9] = arguments[_key9];
-    }
-
-    (_console9 = console).log.apply(_console9, ['resetAfterCommit'].concat(args));
+  resetAfterCommit: function resetAfterCommit(containerInfo) {
+    console.log('resetAfterCommit', containerInfo);
   },
-  appendChildToContainer: function appendChildToContainer() {
-    var _console10;
-
-    for (var _len10 = arguments.length, args = Array(_len10), _key10 = 0; _key10 < _len10; _key10++) {
-      args[_key10] = arguments[_key10];
-    }
-
-    (_console10 = console).log.apply(_console10, ['appendChildToContainer'].concat(args));
+  appendChildToContainer: function appendChildToContainer(parentInstance, child) {
+    console.log('appendChildToContainer', parentInstance, child);
+    parentInstance.appendChild(child);
   },
   supportsMutation: true
 };
@@ -16600,6 +16593,13 @@ var Banana = {
   }
 };
 
+function XXX() {
+  return _react2.default.createElement(
+    'span',
+    null,
+    'XXX'
+  );
+}
 function Foo(_ref) {
   var children = _ref.children;
 
@@ -16607,14 +16607,15 @@ function Foo(_ref) {
     'p',
     null,
     'Foo',
-    children
+    children,
+    _react2.default.createElement(XXX, null)
   );
 }
 function App() {
   return _react2.default.createElement(
     Foo,
     null,
-    'Bar'
+    'App'
   );
 }
 
