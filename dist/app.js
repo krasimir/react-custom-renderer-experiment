@@ -16481,6 +16481,8 @@ if (process.env.NODE_ENV === 'production') {
 },{"./cjs/scheduler-tracing.development.js":11,"./cjs/scheduler-tracing.production.min.js":12,"_process":2}],17:[function(require,module,exports){
 'use strict';
 
+var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
+
 var _react = require('react');
 
 var _react2 = _interopRequireDefault(_react);
@@ -16489,7 +16491,18 @@ var _reactReconciler = require('react-reconciler');
 
 var _reactReconciler2 = _interopRequireDefault(_reactReconciler);
 
+var _scheduler = require('scheduler');
+
+var scheduler = _interopRequireWildcard(_scheduler);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+
+var now = scheduler.unstable_now;
+
 
 function setStyles(domElement, styles) {
   Object.keys(styles).forEach(function (name) {
@@ -16505,8 +16518,27 @@ function setStyles(domElement, styles) {
   });
 }
 
+function isEventName(propName) {
+  return propName.startsWith('on') && window.hasOwnProperty(propName.toLowerCase());
+}
+
+function shallowDiff(oldObj, newObj) {
+  // Return a diff between the new and the old object
+  var uniqueProps = new Set([].concat(_toConsumableArray(Object.keys(oldObj)), _toConsumableArray(Object.keys(newObj))));
+  var changedProps = Array.from(uniqueProps).filter(function (propName) {
+    return oldObj[propName] !== newObj[propName];
+  });
+
+  return changedProps;
+}
+
+function isUppercase(letter) {
+  return (/[A-Z]/.test(letter)
+  );
+}
+
 var HostConfig = {
-  now: Date.now,
+  now: now,
   getRootHostContext: function getRootHostContext(rootInstance) {
     console.log('getRootHostContext', rootInstance);
     return { rootHostContext: 'yes' };
@@ -16576,7 +16608,79 @@ var HostConfig = {
     console.log('appendChildToContainer', parentInstance, child);
     parentInstance.appendChild(child);
   },
-  supportsMutation: true
+  getPublicInstance: function getPublicInstance(inst) {
+    console.log('getPublicInstance', inst);
+    return inst;
+  },
+  prepareUpdate: function prepareUpdate(domElement, type, oldProps, newProps, rootContainerInstance, hostContext) {
+    console.log('prepareUpdate', domElement, type, oldProps, newProps, rootContainerInstance, hostContext);
+    return shallowDiff(oldProps, newProps);
+  },
+  appendChild: function appendChild(parentInstance, child) {
+    console.log('appendChild', parentInstance, child);
+    parentInstance.appendChild(child);
+  },
+  removeChildFromContainer: function removeChildFromContainer(parentInstance, child) {
+    console.log('removeChildFromContainer', parentInstance, child);
+    parentInstance.removeChild(child);
+  },
+  insertBefore: function insertBefore(parentInstance, child, beforeChild) {
+    console.log('insertBefore', parentInstance, child);
+    parentInstance.insertBefore(child, beforeChild);
+  },
+  insertInContainerBefore: function insertInContainerBefore(parentInstance, child, beforeChild) {
+    console.log('insertInContainerBefore', parentInstance, child, beforeChild);
+    parentInstance.insertBefore(child, beforeChild);
+  },
+  commitUpdate: function commitUpdate(domElement, updatePayload, type, oldProps, newProps, internalInstanceHandle) {
+    console.log('commitUpdate', domElement, updatePayload, type, oldProps, newProps, internalInstanceHandle);
+    updatePayload.forEach(function (propName) {
+      // children changes is done by the other methods like `commitTextUpdate`
+      if (propName === 'children') return;
+
+      if (propName === 'style') {
+        // Return a diff between the new and the old styles
+        var styleDiffs = shallowDiff(oldProps.style, newProps.style);
+        var finalStyles = styleDiffs.reduce(function (acc, styleName) {
+          // Style marked to be unset
+          if (!newProps.style[styleName]) acc[styleName] = '';else acc[styleName] = newProps.style[styleName];
+
+          return acc;
+        }, {});
+
+        setStyles(domElement, finalStyles);
+      } else if (newProps[propName] || typeof newProps[propName] === 'number') {
+        domElement.setAttribute(propName, newProps[propName]);
+      } else {
+        if (isEventName(propName)) {
+          var eventName = propName.toLowerCase().replace('on', '');
+          domElement.removeEventListener(eventName, oldProps[propName]);
+        } else {
+          domElement.removeAttribute(propName);
+        }
+      }
+    });
+  },
+  commitMount: function commitMount(domElement, type, newProps, internalInstanceHandle) {
+    console.log('commitMount', domElement, type, newProps, internalInstanceHandle);
+    domElement.focus();
+  },
+  commitTextUpdate: function commitTextUpdate(textInstance, oldText, newText) {
+    console.log('commitTextUpdate', textInstance, oldText, newText);
+    textInstance.nodeValue = newText;
+  },
+  resetTextContent: function resetTextContent(domElement) {
+    console.log('resetTextContent', domElement);
+    domElement.textContent = '';
+  },
+
+  scheduleDeferredCallback: scheduler.unstable_scheduleCallback,
+  cancelDeferredCallback: scheduler.unstable_cancelCallback,
+  schedulePassiveEffects: scheduler.unstable_scheduleCallback,
+  cancelPassiveEffects: scheduler.unstable_cancelCallback,
+  supportsMutation: true,
+
+  useSyncScheduling: true
 };
 var ReactReconcilerInst = (0, _reactReconciler2.default)(HostConfig);
 var rootContainer;
@@ -16594,10 +16698,24 @@ var Banana = {
 };
 
 function XXX() {
+  var _useState = (0, _react.useState)(0),
+      _useState2 = _slicedToArray(_useState, 2),
+      counter = _useState2[0],
+      setCounter = _useState2[1];
+
+  console.log(counter);
+  (0, _react.useEffect)(function () {
+    setCounter(42);
+  }, []);
+
   return _react2.default.createElement(
     'span',
-    null,
-    'XXX'
+    { style: { cursor: 'pointer' }, onClick: function onClick() {
+        return setCounter(counter + 1);
+      } },
+    'XXX(',
+    counter,
+    ')'
   );
 }
 function Foo(_ref) {
@@ -16621,4 +16739,4 @@ function App() {
 
 Banana.render(_react2.default.createElement(App, null), document.querySelector('#root'));
 
-},{"react":10,"react-reconciler":7}]},{},[17]);
+},{"react":10,"react-reconciler":7,"scheduler":15}]},{},[17]);

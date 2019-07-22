@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactReconciler from 'react-reconciler';
+import * as scheduler from 'scheduler';
+const {unstable_now: now} = scheduler;
 
 function setStyles(domElement, styles) {
   Object.keys(styles).forEach(name => {
@@ -17,8 +19,26 @@ function setStyles(domElement, styles) {
   });
 }
 
+function isEventName(propName) {
+  return propName.startsWith('on') && window.hasOwnProperty(propName.toLowerCase());
+}
+
+function shallowDiff(oldObj, newObj) {
+  // Return a diff between the new and the old object
+  const uniqueProps = new Set([...Object.keys(oldObj), ...Object.keys(newObj)]);
+  const changedProps = Array.from(uniqueProps).filter(
+    propName => oldObj[propName] !== newObj[propName]
+  );
+
+  return changedProps;
+}
+
+function isUppercase(letter) {
+  return /[A-Z]/.test(letter);
+}
+
 const HostConfig = {
-  now: Date.now,
+  now,
   getRootHostContext: function(rootInstance) {
     console.log('getRootHostContext', rootInstance);
     return { rootHostContext: 'yes' };
@@ -92,7 +112,83 @@ const HostConfig = {
     console.log('appendChildToContainer', parentInstance, child)
     parentInstance.appendChild(child);
   },
-  supportsMutation: true
+  getPublicInstance(inst) {
+    console.log('getPublicInstance', inst)
+    return inst;
+  },
+  prepareUpdate(domElement, type, oldProps, newProps, rootContainerInstance, hostContext) {
+    console.log('prepareUpdate', domElement, type, oldProps, newProps, rootContainerInstance, hostContext)
+    return shallowDiff(oldProps, newProps);
+  },
+  appendChild(parentInstance, child) {
+    console.log('appendChild', parentInstance, child)
+    parentInstance.appendChild(child);
+  },
+  removeChildFromContainer(parentInstance, child) {
+    console.log('removeChildFromContainer', parentInstance, child)
+    parentInstance.removeChild(child);
+  },
+
+  insertBefore(parentInstance, child, beforeChild) {
+    console.log('insertBefore', parentInstance, child)
+    parentInstance.insertBefore(child, beforeChild);
+  },
+
+  insertInContainerBefore(parentInstance, child, beforeChild) {
+    console.log('insertInContainerBefore', parentInstance, child, beforeChild)
+    parentInstance.insertBefore(child, beforeChild);
+  },
+  commitUpdate(domElement, updatePayload, type, oldProps, newProps, internalInstanceHandle) {
+    console.log('commitUpdate', domElement, updatePayload, type, oldProps, newProps, internalInstanceHandle)
+    updatePayload.forEach(propName => {
+      // children changes is done by the other methods like `commitTextUpdate`
+      if (propName === 'children') return;
+
+      if (propName === 'style') {
+        // Return a diff between the new and the old styles
+        const styleDiffs = shallowDiff(oldProps.style, newProps.style);
+        const finalStyles = styleDiffs.reduce((acc, styleName) => {
+          // Style marked to be unset
+          if (!newProps.style[styleName]) acc[styleName] = '';
+          else acc[styleName] = newProps.style[styleName];
+
+          return acc;
+        }, {});
+
+        setStyles(domElement, finalStyles);
+      } else if (newProps[propName] || typeof newProps[propName] === 'number') {
+        domElement.setAttribute(propName, newProps[propName]);
+      } else {
+        if (isEventName(propName)) {
+          const eventName = propName.toLowerCase().replace('on', '');
+          domElement.removeEventListener(eventName, oldProps[propName]);
+        } else {
+          domElement.removeAttribute(propName);
+        }
+      }
+    });
+  },
+  commitMount(domElement, type, newProps, internalInstanceHandle) {
+    console.log('commitMount', domElement, type, newProps, internalInstanceHandle);
+    domElement.focus();
+  },
+
+  commitTextUpdate(textInstance, oldText, newText) {
+    console.log('commitTextUpdate', textInstance, oldText, newText);
+    textInstance.nodeValue = newText;
+  },
+
+  resetTextContent(domElement) {
+    console.log('resetTextContent', domElement);
+    domElement.textContent = '';
+  },
+  scheduleDeferredCallback: scheduler.unstable_scheduleCallback,
+  cancelDeferredCallback: scheduler.unstable_cancelCallback,
+  schedulePassiveEffects: scheduler.unstable_scheduleCallback,
+  cancelPassiveEffects: scheduler.unstable_cancelCallback,
+  supportsMutation: true,
+
+  useSyncScheduling: true
 }
 const ReactReconcilerInst = ReactReconciler(HostConfig);
 var rootContainer;
@@ -110,7 +206,17 @@ const Banana = {
 };
 
 function XXX() {
-  return <span>XXX</span>;
+  const [ counter, setCounter ] = useState(0);
+  console.log(counter);
+  useEffect(() => {
+    setCounter(42);
+  }, [])
+
+  return (
+    <span style={ { cursor: 'pointer' } } onClick={ () => setCounter(counter + 1) }>
+      XXX({ counter })
+    </span>
+  );
 }
 function Foo({ children }) {
   return <p>Foo{ children }<XXX /></p>;

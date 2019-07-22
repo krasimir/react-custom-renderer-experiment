@@ -24,9 +24,8 @@
     "react-dom": "16.8.6",
     "regenerator-runtime": "0.12.1",
     "vis": "4.21.0",
-    "watchify": "3.9.0"
-  },
-  "dependencies": {
-    "react-reconciler": "0.20.4"
+    "watchify": "3.9.0",
+    "react-reconciler": "0.20.4",
+    "scheduler": "0.13.6"
   }
 }
