@@ -1,7 +1,13 @@
+import ReactDOM from '../react-dom';
 import React, { useState, useEffect } from 'react';
 import ReactReconciler from 'react-reconciler';
 import * as scheduler from 'scheduler';
 const {unstable_now: now} = scheduler;
+
+const log = (...args) => {
+  console.log(args[0]);
+  // console.log(...args);
+}
 
 function setStyles(domElement, styles) {
   Object.keys(styles).forEach(name => {
@@ -40,15 +46,15 @@ function isUppercase(letter) {
 const HostConfig = {
   now,
   getRootHostContext: function(rootInstance) {
-    console.log('getRootHostContext', rootInstance);
+    log('getRootHostContext', rootInstance);
     return { rootHostContext: 'yes' };
   },
   getChildHostContext: function(parentHostContext, type, rootInstance) {
-    console.log('getChildHostContext', parentHostContext, type, rootInstance);
+    log('getChildHostContext', parentHostContext, type, rootInstance);
     return { childHostContext: 'yes' }
   },
   shouldSetTextContent: function(type, props) {
-    console.log('shouldSetTextContent', type, props);
+    log('shouldSetTextContent', type, props);
     return (
       type === 'textarea' ||
       typeof props.children === 'string' ||
@@ -56,19 +62,19 @@ const HostConfig = {
     );
   },
   createTextInstance: function(text, rootContainerInstance, internalInstanceHandle) {
-    console.log('createTextInstance', text, rootContainerInstance, internalInstanceHandle)
+    log('createTextInstance', text, rootContainerInstance, internalInstanceHandle)
     return document.createTextNode(text);
   },
   createInstance: function(type, props, rootContainerInstance, hostContext, internalInstanceHandle) {
-    console.log('createInstance', type, props, rootContainerInstance, hostContext, internalInstanceHandle)
+    log('createInstance', type, props, rootContainerInstance, hostContext, internalInstanceHandle)
     return document.createElement(type);
   },
   appendInitialChild: function(parentInstance, child) {
-    console.log('appendInitialChild', parentInstance, child);
+    log('appendInitialChild', parentInstance, child);
     parentInstance.appendChild(child);
   },
   finalizeInitialChildren: function(domElement, type, props, rootContainerInstance, hostContext) {
-    console.log('finalizeInitialChildren', domElement, type, props, rootContainerInstance, hostContext);
+    log('finalizeInitialChildren', domElement, type, props, rootContainerInstance, hostContext);
     // Set the prop to the domElement
     Object.keys(props).forEach(propName => {
       const propValue = props[propName];
@@ -84,6 +90,7 @@ const HostConfig = {
       } else if (propName === 'className') {
         domElement.setAttribute('class', propValue);
       } else if (isEventName(propName)) {
+        log('propValue', propValue);
         const eventName = propName.toLowerCase().replace('on', '');
         domElement.addEventListener(eventName, propValue);
       } else {
@@ -103,43 +110,43 @@ const HostConfig = {
     return false;
   },
   prepareForCommit: function(containerInfo) {
-    console.log('prepareForCommit', containerInfo)
+    log('prepareForCommit', containerInfo)
   },
   resetAfterCommit: function(containerInfo) {
-    console.log('resetAfterCommit', containerInfo)
+    log('resetAfterCommit', containerInfo)
   },
   appendChildToContainer: function(parentInstance, child) {
-    console.log('appendChildToContainer', parentInstance, child)
+    log('appendChildToContainer', parentInstance, child)
     parentInstance.appendChild(child);
   },
   getPublicInstance(inst) {
-    console.log('getPublicInstance', inst)
+    log('getPublicInstance', inst)
     return inst;
   },
   prepareUpdate(domElement, type, oldProps, newProps, rootContainerInstance, hostContext) {
-    console.log('prepareUpdate', domElement, type, oldProps, newProps, rootContainerInstance, hostContext)
+    log('prepareUpdate', domElement, type, oldProps, newProps, rootContainerInstance, hostContext)
     return shallowDiff(oldProps, newProps);
   },
   appendChild(parentInstance, child) {
-    console.log('appendChild', parentInstance, child)
+    log('appendChild', parentInstance, child)
     parentInstance.appendChild(child);
   },
   removeChildFromContainer(parentInstance, child) {
-    console.log('removeChildFromContainer', parentInstance, child)
+    log('removeChildFromContainer', parentInstance, child)
     parentInstance.removeChild(child);
   },
 
   insertBefore(parentInstance, child, beforeChild) {
-    console.log('insertBefore', parentInstance, child)
+    log('insertBefore', parentInstance, child)
     parentInstance.insertBefore(child, beforeChild);
   },
 
   insertInContainerBefore(parentInstance, child, beforeChild) {
-    console.log('insertInContainerBefore', parentInstance, child, beforeChild)
+    log('insertInContainerBefore', parentInstance, child, beforeChild)
     parentInstance.insertBefore(child, beforeChild);
   },
   commitUpdate(domElement, updatePayload, type, oldProps, newProps, internalInstanceHandle) {
-    console.log('commitUpdate', domElement, updatePayload, type, oldProps, newProps, internalInstanceHandle)
+    log('commitUpdate', domElement, updatePayload, type, oldProps, newProps, internalInstanceHandle)
     updatePayload.forEach(propName => {
       // children changes is done by the other methods like `commitTextUpdate`
       if (propName === 'children') return;
@@ -157,7 +164,13 @@ const HostConfig = {
 
         setStyles(domElement, finalStyles);
       } else if (newProps[propName] || typeof newProps[propName] === 'number') {
-        domElement.setAttribute(propName, newProps[propName]);
+        if (isEventName(propName)) {
+          const eventName = propName.toLowerCase().replace('on', '');
+          domElement.removeEventListener(eventName, oldProps[propName]);
+          domElement.addEventListener(eventName, newProps[propName]);
+        } else {
+          domElement.setAttribute(propName, newProps[propName]);
+        }
       } else {
         if (isEventName(propName)) {
           const eventName = propName.toLowerCase().replace('on', '');
@@ -169,17 +182,17 @@ const HostConfig = {
     });
   },
   commitMount(domElement, type, newProps, internalInstanceHandle) {
-    console.log('commitMount', domElement, type, newProps, internalInstanceHandle);
+    log('commitMount', domElement, type, newProps, internalInstanceHandle);
     domElement.focus();
   },
 
   commitTextUpdate(textInstance, oldText, newText) {
-    console.log('commitTextUpdate', textInstance, oldText, newText);
+    log('commitTextUpdate', textInstance, oldText, newText);
     textInstance.nodeValue = newText;
   },
 
   resetTextContent(domElement) {
-    console.log('resetTextContent', domElement);
+    log('resetTextContent', domElement);
     domElement.textContent = '';
   },
   scheduleDeferredCallback: scheduler.unstable_scheduleCallback,
@@ -230,3 +243,4 @@ function App() {
 }
 
 Banana.render(<App />, document.querySelector('#root'));
+// ReactDOM.render(<App />, document.querySelector('#root'));
