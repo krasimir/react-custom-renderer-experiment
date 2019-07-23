@@ -1,4 +1,3 @@
-import ReactDOM from '../react-dom';
 import React, { useState, useEffect } from 'react';
 import ReactReconciler from 'react-reconciler';
 import * as scheduler from 'scheduler';
@@ -220,7 +219,7 @@ const Banana = {
 
 function XXX() {
   const [ counter, setCounter ] = useState(0);
-  console.log(counter);
+
   useEffect(() => {
     setCounter(42);
   }, [])
@@ -243,4 +242,3 @@ function App() {
 }
 
 Banana.render(<App />, document.querySelector('#root'));
-// ReactDOM.render(<App />, document.querySelector('#root'));
